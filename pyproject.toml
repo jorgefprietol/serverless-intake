@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "serverless-intake"
+version = "0.1.0"
+description = "Operational service with auditable decisions and reproducible local execution"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{name = "Jorge Prieto"}]
+dependencies = []
+
+[project.scripts]
+operations-service = "app.runtime:main"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.setuptools.package-data]
+app = ["web/*", "resources/*"]

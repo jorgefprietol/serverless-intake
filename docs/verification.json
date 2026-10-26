@@ -1,0 +1,27 @@
+{
+  "project": "serverless-intake",
+  "verified_at": "2026-10-26T18:02:52.224941+00:00",
+  "python": "3.12.14",
+  "dataset": "synthetic",
+  "checks": {
+    "tests": {
+      "passed": true,
+      "count": 35
+    },
+    "demo": {
+      "passed": true
+    },
+    "compile": {
+      "passed": true
+    },
+    "workflow": {
+      "passed": true
+    },
+    "documentation_links": {
+      "passed": true,
+      "missing": []
+    }
+  },
+  "external_services_tested": false,
+  "scope": "Local tests and SDK doubles; cloud deployment, n8n runtime and live model quality not verified"
+}

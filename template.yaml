@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Document intake with bounded Bedrock workers and durable job state
+Parameters:
+  ModelId:
+    Type: String
+    Description: Bedrock model ID available in this region
+  ModelArn:
+    Type: String
+    Description: Exact foundation model ARN matching ModelId (no cross-region inference)
+    AllowedPattern: 'arn:aws:bedrock:[a-z0-9-]+::foundation-model/.+'
+Globals:
+  Function:
+    Runtime: python3.12
+    Architectures: [arm64]
+    MemorySize: 256
+    Environment:
+      Variables:
+        JOBS_TABLE: !Ref Jobs
+Resources:
+  Api:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      Auth:
+        EnableIamAuthorizer: true
+        DefaultAuthorizer: AWS_IAM
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 10
+        ThrottlingRateLimit: 5
+  Jobs:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions: [{AttributeName: id, AttributeType: S}]
+      KeySchema: [{AttributeName: id, KeyType: HASH}]
+      SSESpecification: {SSEEnabled: true}
+      TimeToLiveSpecification: {AttributeName: expires_at, Enabled: true}
+      PointInTimeRecoverySpecification: {PointInTimeRecoveryEnabled: true}
+  Results:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: {SSEAlgorithm: AES256}
+      LifecycleConfiguration:
+        Rules: [{Id: ExpireResults, Status: Enabled, ExpirationInDays: 30}]
+  DeadLetter:
+    Type: AWS::SQS::Queue
+    Properties:
+      SqsManagedSseEnabled: true
+      MessageRetentionPeriod: 1209600
+  Queue:
+    Type: AWS::SQS::Queue
+    Properties:
+      SqsManagedSseEnabled: true
+      VisibilityTimeout: 360
+      RedrivePolicy: {deadLetterTargetArn: !GetAtt DeadLetter.Arn, maxReceiveCount: 5}
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: app.aws_handlers.api_handler
+      Timeout: 15
+      ReservedConcurrentExecutions: 5
+      Environment:
+        Variables: {QUEUE_URL: !Ref Queue}
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:PutItem, dynamodb:GetItem]
+              Resource: !GetAtt Jobs.Arn
+            - Effect: Allow
+              Action: sqs:SendMessage
+              Resource: !GetAtt Queue.Arn
+      Events:
+        Create:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: /jobs, Method: POST}
+        Status:
+          Type: HttpApi
+          Properties: {ApiId: !Ref Api, Path: '/jobs/{id}', Method: GET}
+  Worker:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: .
+      Handler: app.aws_handlers.worker_handler
+      Timeout: 60
+      ReservedConcurrentExecutions: 2
+      Environment:
+        Variables: {RESULTS_BUCKET: !Ref Results, MODEL_ID: !Ref ModelId}
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: [dynamodb:GetItem, dynamodb:UpdateItem]
+              Resource: !GetAtt Jobs.Arn
+            - Effect: Allow
+              Action: [s3:PutObject]
+              Resource: !Sub '${Results.Arn}/results/*'
+            - Effect: Allow
+              Action: bedrock:InvokeModel
+              Resource: !Ref ModelArn
+        - SQSPollerPolicy:
+            QueueName: !GetAtt Queue.QueueName
+      Events:
+        Jobs:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt Queue.Arn
+            BatchSize: 1
+            FunctionResponseTypes: [ReportBatchItemFailures]
+  ApiLog:
+    Type: AWS::Logs::LogGroup
+    Properties: {LogGroupName: !Sub '/aws/lambda/${ApiFunction}', RetentionInDays: 14}
+  WorkerLog:
+    Type: AWS::Logs::LogGroup
+    Properties: {LogGroupName: !Sub '/aws/lambda/${Worker}', RetentionInDays: 14}
+Outputs:
+  ApiUrl:
+    Value: !Sub 'https://${Api}.execute-api.${AWS::Region}.amazonaws.com'
+  ResultsBucket:
+    Value: !Ref Results
+  DeadLetterQueue:
+    Value: !Ref DeadLetter
