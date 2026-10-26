@@ -14,3 +14,22 @@ var/
 .coverage
 .pytest_cache/
 node_modules/
+
+# Local correspondence and private working material
+.private/
+private-notes/
+correspondence/
+borradores/
+drafts/
+*.eml
+*.msg
+*.txt
+!requirements.txt
+!requirements-*.txt
+!data/invoice-ocr.txt
+respuesta-*
+response-*
+borrador-*
+draft-*
+mensaje-personal-*
+correo-personal-*
