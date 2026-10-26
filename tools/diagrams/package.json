@@ -1,0 +1,7 @@
+{
+  "name": "documentation-diagrams",
+  "private": true,
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "12.0.0"
+  }
+}

@@ -13,3 +13,4 @@ var/
 *.db-wal
 .coverage
 .pytest_cache/
+node_modules/
