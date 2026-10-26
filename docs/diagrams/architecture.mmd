@@ -1,0 +1,24 @@
+flowchart TB
+    Client["Cliente"] --> LocalAPI
+    subgraph Local["Implementación local ejecutable"]
+        LocalAPI["CLI o API con token"] --> LocalState["Trabajos en SQLite"]
+        LocalState --> LocalWorker["Proceso explícito o inline"]
+        LocalWorker --> LocalResult["Reglas o extracción local"]
+    end
+    subgraph Optional["Opcionales por configurar"]
+        N8N["Workflow n8n incluido"]
+        Ollama["Generación Ollama"]
+    end
+    N8N -.-> LocalAPI
+    LocalWorker -.-> Ollama
+    Client -.-> IAM
+    subgraph Cloud["AWS: adaptadores y plantilla sin desplegar"]
+        IAM["API Gateway con IAM"] --> Intake["Lambda de entrada"]
+        Intake --> State["DynamoDB"]
+        Intake --> Queue["SQS"]
+        Queue --> Worker["Lambda worker"]
+        Worker --> State
+        Worker --> Model["Bedrock Converse"]
+        Worker --> Results["S3 privado"]
+        Queue --> DLQ["Cola de fallos"]
+    end

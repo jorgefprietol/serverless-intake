@@ -1,0 +1,17 @@
+flowchart TD
+    Start["Recibir documento por API Gateway"] --> IAM["Autenticar IAM y validar entrada"]
+    IAM --> Identity["Derivar trabajo desde Idempotency-Key"]
+    Identity --> Exists{"¿Trabajo existente?"}
+    Exists -->|Sí| Digest{"¿Documento idéntico?"}
+    Digest -->|No| Conflict["Responder conflicto"]
+    Digest -->|Sí| Queue["Publicar identificador en SQS si sigue pendiente"]
+    Exists -->|No| Persist["Persistir documento y estado queued"]
+    Persist --> Queue
+    Queue --> Accept["Responder 202 después del envío"]
+    Queue --> Claim["Worker reclama lease"]
+    Claim --> Complete{"¿Trabajo ya completado?"}
+    Complete -->|Sí| Reuse["Confirmar mensaje sin nueva inferencia"]
+    Complete -->|No| Model["Invocar Bedrock y guardar resultado en S3"]
+    Model --> Done["Marcar completed en DynamoDB"]
+    Model -->|Fallo| Retry["Reportar fallo parcial y reintentar"]
+    Retry -->|Cinco entregas fallidas| DLQ["Conservar mensaje en DLQ"]

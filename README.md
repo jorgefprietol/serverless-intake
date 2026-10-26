@@ -2,6 +2,12 @@
 
 Servicio de entrada de documentos con trabajos persistentes, procesamiento desacoplado y resultados trazables. Incluye una implementación local y adaptadores para API Gateway, Lambda, SQS, DynamoDB, Bedrock y S3.
 
+## Diseño y tecnologías
+
+Python 3.10+ y SQLite para la demo; adaptadores Python 3.12 para Lambda, API Gateway, SQS, DynamoDB, Bedrock y S3 definidos mediante AWS SAM.
+
+[Diagrama de arquitectura](docs/architecture.md) · [Diagrama del flujo](docs/flow.md) · [Tecnologías y alcance](docs/technologies.md)
+
 ## Ejecución local
 
 Python 3.10 o posterior; no requiere instalar paquetes para la demo.

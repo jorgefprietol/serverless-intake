@@ -1,6 +1,6 @@
 {
   "project": "serverless-intake",
-  "verified_at": "2026-10-26T18:02:52.224941+00:00",
+  "verified_at": "2026-10-26T18:56:14.117776+00:00",
   "python": "3.12.14",
   "dataset": "synthetic",
   "checks": {
@@ -15,6 +15,9 @@
       "passed": true
     },
     "workflow": {
+      "passed": true
+    },
+    "documentation": {
       "passed": true
     },
     "documentation_links": {

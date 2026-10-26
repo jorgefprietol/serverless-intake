@@ -17,3 +17,4 @@ jobs:
       - run: python -m app demo
       - run: python -m compileall -q app
       - run: python tools/validate_workflow.py
+      - run: python tools/validate_docs.py
